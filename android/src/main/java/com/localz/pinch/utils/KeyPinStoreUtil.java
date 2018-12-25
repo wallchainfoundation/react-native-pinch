@@ -1,5 +1,7 @@
 package com.localz.pinch.utils;
 
+import android.util.Log;
+
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -7,56 +9,65 @@ import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.HashMap;
-import java.util.Map;
 
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 
 public class KeyPinStoreUtil {
 
-    private static HashMap<String[], KeyPinStoreUtil> instances = new HashMap<>();
+    private static final String TAG = KeyPinStoreUtil.class.getName();
+
+    private static HashMap<String, KeyPinStoreUtil> instances = new HashMap<>();
     private SSLContext sslContext = SSLContext.getInstance("TLS");
 
-    public static synchronized KeyPinStoreUtil getInstance(String[] filenames) throws CertificateException, IOException, KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
-        if (filenames != null && instances.get(filenames) == null) {
-            instances.put(filenames, new KeyPinStoreUtil(filenames));
+    public static synchronized KeyPinStoreUtil getInstance(String truststore, String keystore, String storeType, String storePassword) throws CertificateException, IOException, KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+        if (truststore != null && instances.get(truststore) == null) {
+            instances.put(truststore, new KeyPinStoreUtil(truststore, keystore, storeType, storePassword));
         }
-        return instances.get(filenames);
+        return instances.get(truststore);
 
     }
 
-    private KeyPinStoreUtil(String[] filenames) throws CertificateException, IOException, KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+    private KeyPinStoreUtil(String truststore, String keystore, String storeType, String storePassword)
+            throws CertificateException, IOException, KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
         CertificateFactory cf = CertificateFactory.getInstance("X.509");
 
-        // Create a KeyStore for our trusted CAs
-        String keyStoreType = KeyStore.getDefaultType();
-        KeyStore keyStore = KeyStore.getInstance(keyStoreType);
-        keyStore.load(null, null);
-
-        for (String filename : filenames) {
-            InputStream caInput = new BufferedInputStream(this.getClass().getClassLoader().getResourceAsStream("assets/" + filename + ".cer"));
-            Certificate ca;
-            try {
-                ca = cf.generateCertificate(caInput);
-                System.out.println("ca=" + ((X509Certificate) ca).getSubjectDN());
-            } finally {
-                caInput.close();
-            }
-
-            keyStore.setCertificateEntry(filename, ca);
+        // Create a KeyStore for our trusted CAs.
+        KeyStore keyStore = KeyStore.getInstance(storeType);
+        InputStream keystoreFile = new BufferedInputStream(this.getClass().getClassLoader().getResourceAsStream("assets/" + keystore));
+        try{
+            keyStore.load(keystoreFile, storePassword.toCharArray());
+        }finally {
+            keystoreFile.close();
+        }
+        InputStream truststoreFile = new BufferedInputStream(this.getClass().getClassLoader().getResourceAsStream("assets/" + truststore));
+        try {
+            Certificate ca = cf.generateCertificate(truststoreFile);
+            keyStore.setCertificateEntry(truststore, ca);
+            Log.i(TAG, "CA=" + ((X509Certificate) ca).getSubjectDN());
+        } finally {
+            truststoreFile.close();
         }
 
-        // Create a TrustManager that trusts the CAs in our KeyStore
+        // Create a TrustManager that trusts the CAs in our KeyStore.
         String tmfAlgorithm = TrustManagerFactory.getDefaultAlgorithm();
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance(tmfAlgorithm);
+        try {
+            kmf.init(keyStore, storePassword.toCharArray());
+        } catch (UnrecoverableKeyException e) {
+            Log.e(TAG,"KeyManagerFactory init error: ",e);
+        }
         TrustManagerFactory tmf = TrustManagerFactory.getInstance(tmfAlgorithm);
         tmf.init(keyStore);
 
-        sslContext.init(null, tmf.getTrustManagers(), null);
+        sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
     }
 
     public SSLContext getContext() {

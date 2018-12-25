@@ -1,5 +1,6 @@
 package com.localz.pinch.utils;
 
+import android.annotation.SuppressLint;
 import android.util.Log;
 
 import com.facebook.react.bridge.Arguments;
@@ -26,7 +27,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSession;
 
 public class HttpUtil {
     private static final String DEFAULT_CONTENT_TYPE = "application/json";
@@ -79,8 +82,18 @@ public class HttpUtil {
         String method = request.method.toUpperCase();
 
         connection = (HttpsURLConnection) url.openConnection();
-        if (request.certFilenames != null) {
-            connection.setSSLSocketFactory(KeyPinStoreUtil.getInstance(request.certFilenames).getContext().getSocketFactory());
+        if (request.truststore != null) {
+            connection.setSSLSocketFactory(
+                    KeyPinStoreUtil.getInstance(request.truststore, request.keystore, request.storeType, request.storePassword)
+                            .getContext().getSocketFactory()
+            );
+            connection.setHostnameVerifier(new HostnameVerifier() {
+                @Override
+                public boolean verify(String hostname, SSLSession session) {
+                    Log.d("==HostnameVerifier==", hostname);
+                    return true;
+                }
+            });
         }
         connection.setRequestMethod(method);
 

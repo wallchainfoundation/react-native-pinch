@@ -35,10 +35,10 @@ import java.security.cert.CertificateException;
 public class RNPinch extends ReactContextBaseJavaModule {
 
     private static final String OPT_METHOD_KEY = "method";
-    private static final String OPT_HEADER_KEY = "headers";
+    private static final String OPT_HEADER_KEY = "header";
     private static final String OPT_BODY_KEY = "body";
-    private static final String OPT_SSL_PINNING_KEY = "sslPinning";
-    private static final String OPT_TIMEOUT_KEY = "timeoutInterval";
+    private static final String OPT_SSL_PINNING_KEY = "sslconfig";
+    private static final String OPT_TIMEOUT_KEY = "timeout";
 
     private HttpUtil httpUtil;
     private String packageName = null;
@@ -98,17 +98,14 @@ public class RNPinch extends ReactContextBaseJavaModule {
                     request.headers = JsonUtil.convertReadableMapToJson(opts.getMap(OPT_HEADER_KEY));
                 }
                 if (opts.hasKey(OPT_SSL_PINNING_KEY)) {
-                    if (opts.getMap(OPT_SSL_PINNING_KEY).hasKey("cert")) {
-                        String fileName = opts.getMap(OPT_SSL_PINNING_KEY).getString("cert");
-                        request.certFilenames = new String[]{fileName};
-                    } else if (opts.getMap(OPT_SSL_PINNING_KEY).hasKey("certs")) {
-                        ReadableArray certsStrings = opts.getMap(OPT_SSL_PINNING_KEY).getArray("certs");
-                        String[] certs = new String[certsStrings.size()];
-                        for (int i = 0; i < certsStrings.size(); i++) {
-                            certs[i] = certsStrings.getString(i);
-                        }
-                        request.certFilenames = certs;
-                    }
+                    String truststore = opts.getMap(OPT_SSL_PINNING_KEY).getString("truststore");
+                    String keystore = opts.getMap(OPT_SSL_PINNING_KEY).getString("keystore");
+                    String storeType = opts.getMap(OPT_SSL_PINNING_KEY).getString("storeType");
+                    String storePassword = opts.getMap(OPT_SSL_PINNING_KEY).getString("storePassword");
+                    request.truststore = truststore;
+                    request.keystore = keystore;
+                    request.storeType = storeType;
+                    request.storePassword = storePassword;
                 }
                 if (opts.hasKey(OPT_TIMEOUT_KEY)) {
                     request.timeout = opts.getInt(OPT_TIMEOUT_KEY);
