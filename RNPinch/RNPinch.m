@@ -110,7 +110,7 @@ RCT_EXPORT_METHOD(fetch:(NSString *)url obj:(NSDictionary *)obj callback:(RCTRes
         if (obj[@"method"]) {
             [request setHTTPMethod:obj[@"method"]];
         }
-        if (obj[@"timeoutInterval"]) {
+        if (obj[@"timeout"]) {
           [request setTimeoutInterval:[obj[@"timeoutInterval"] doubleValue] / 1000];
         }
         if (obj[@"headers"] && [obj[@"headers"] isKindOfClass:[NSDictionary class]]) {
@@ -127,16 +127,22 @@ RCT_EXPORT_METHOD(fetch:(NSString *)url obj:(NSDictionary *)obj callback:(RCTRes
             [request setHTTPBody:data];
         }
     }
-    if (obj && obj[@"sslPinning"] && obj[@"sslPinning"][@"cert"]) {
-        NSURLSessionSSLPinningDelegate *delegate = [[NSURLSessionSSLPinningDelegate alloc] initWithCertNames:@[obj[@"sslPinning"][@"cert"]]];
+    if (obj && obj[@"sslconfig"] && obj[@"sslconfig"][@"truststore"]) {
+        // load truststore
+        NSURLSessionSSLPinningDelegate *delegate = [[NSURLSessionSSLPinningDelegate alloc] initWithCertNames:@[obj[@"sslconfig"][@"truststore"]]];
         session = [NSURLSession sessionWithConfiguration:self.sessionConfig delegate:delegate delegateQueue:[NSOperationQueue mainQueue]];
-    } else if (obj && obj[@"sslPinning"] && obj[@"sslPinning"][@"certs"]) {
+    } else if (obj && obj[@"sslconfig"] && obj[@"sslconfig"][@"certs"]) {
         // load all certs
-        NSURLSessionSSLPinningDelegate *delegate = [[NSURLSessionSSLPinningDelegate alloc] initWithCertNames:obj[@"sslPinning"][@"certs"]];
+        NSURLSessionSSLPinningDelegate *delegate = [[NSURLSessionSSLPinningDelegate alloc] initWithCertNames:obj[@"sslconfig"][@"certs"]];
         session = [NSURLSession sessionWithConfiguration:self.sessionConfig delegate:delegate delegateQueue:[NSOperationQueue mainQueue]];
     } else {
         session = [NSURLSession sessionWithConfiguration:self.sessionConfig];
     }
+
+    //implement load keystore.
+    //keystore: 'squirrel-client-keystore.p12',
+    //storeType: 'PKCS12',
+    //storePassword: '*******'
 
     __block NSURLSessionDataTask *dataTask = [session dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
         if (!error) {

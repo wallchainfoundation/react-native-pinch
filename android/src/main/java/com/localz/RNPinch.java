@@ -35,7 +35,7 @@ import java.security.cert.CertificateException;
 public class RNPinch extends ReactContextBaseJavaModule {
 
     private static final String OPT_METHOD_KEY = "method";
-    private static final String OPT_HEADER_KEY = "header";
+    private static final String OPT_HEADER_KEY = "headers";
     private static final String OPT_BODY_KEY = "body";
     private static final String OPT_SSL_PINNING_KEY = "sslconfig";
     private static final String OPT_TIMEOUT_KEY = "timeout";

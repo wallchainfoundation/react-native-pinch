@@ -14,7 +14,7 @@ public class HttpRequest {
     public String storePassword;
     public int timeout;
 
-    private static final int DEFAULT_TIMEOUT = 10000;
+    private static final int DEFAULT_TIMEOUT = 15000;
 
     public HttpRequest() {
         this.timeout = DEFAULT_TIMEOUT;
